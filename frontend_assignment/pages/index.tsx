@@ -1,13 +1,25 @@
 import detectEthereumProvider from "@metamask/detect-provider"
 import { Strategy, ZkIdentity } from "@zk-kit/identity"
 import { generateMerkleProof, Semaphore } from "@zk-kit/protocols"
-import { providers } from "ethers"
+import { Contract, providers, utils } from "ethers"
 import Head from "next/head"
-import React from "react"
+import React, { useEffect } from "react"
 import styles from "../styles/Home.module.css"
+import Greeter from "artifacts/contracts/Greeters.sol/Greeters.json"
 
 export default function Home() {
     const [logs, setLogs] = React.useState("Connect your wallet and greet!")
+    const [greeting, setGreeting] = React.useState("No Greeting")
+
+    async function onEvent() {
+        const contract = new Contract("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", Greeter.abi)
+        const provider = new providers.JsonRpcProvider("http://localhost:8545")
+        const contractOwner = contract.connect(provider.getSigner())
+        contractOwner.on("NewGreeting", (greeting) => {
+          console.log("Greeting:", utils.parseBytes32String(greeting));
+          setGreeting(utils.parseBytes32String(greeting));
+        });
+    }
 
     async function greet() {
         setLogs("Creating your Semaphore identity...")
@@ -59,7 +71,11 @@ export default function Home() {
         }
     }
 
-    return (
+    useEffect(() => {
+        onEvent();
+      }, []);
+
+      return (
         <div className={styles.container}>
             <Head>
                 <title>Greetings</title>
@@ -77,6 +93,8 @@ export default function Home() {
                 <div onClick={() => greet()} className={styles.button}>
                     Greet
                 </div>
+
+                <div className={styles.description}>Last Greeting: {greeting} ...</div>
             </main>
         </div>
     )
